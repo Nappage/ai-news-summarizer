@@ -47,37 +47,3 @@ pip install -r requirements.txt
 ```bash
 python -m src.main
 ```
-
-## プロジェクト構成
-
-```
-ai_news_summarizer/
-├── README.md
-├── requirements.txt
-├── .env
-├── src/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── config.py
-│   ├── feed_handler.py
-│   ├── content_processor.py
-│   ├── ai_processor.py
-│   └── markdown_generator.py
-├── tests/
-│   ├── __init__.py
-│   └── test_feed_handler.py
-└── output/
-    └── .gitkeep
-```
-
-## ライセンス
-
-MIT License
-
-## 貢献について
-
-1. このリポジトリをフォーク
-2. 新しいブランチを作成 (`git checkout -b feature/awesome-feature`)
-3. 変更をコミット (`git commit -am 'Add awesome feature'`)
-4. ブランチをプッシュ (`git push origin feature/awesome-feature`)
-5. Pull Requestを作成
