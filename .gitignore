@@ -1,6 +1,43 @@
+# Python
 venv/
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment variables
 .env
-.pytest_cache/
-*.pyc
-output/*.md
+.env.*
+!.env.example
+
+# Output and logs
+output/*
+!output/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
