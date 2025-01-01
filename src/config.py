@@ -7,8 +7,8 @@ load_dotenv()
 class Config:
     # Use GOOGLE_API_KEY instead of GEMINI_API_KEY
     GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY')
-    # Use alternative feed URL
-    RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://blog.research.google/feeds/posts/default")
+    # Use the Atom feed URL with proper parameters
+    RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://blog.research.google/feeds/posts/default?alt=rss")
     OUTPUT_DIR = os.getenv('OUTPUT_DIR', "output")
     MAX_SUMMARY_LENGTH = int(os.getenv('MAX_SUMMARY_LENGTH', "500"))
     RETRY_COUNT = 3
