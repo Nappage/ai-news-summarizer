@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 from .config import Config
 import logging
+import time
 
 class FeedHandler:
     def __init__(self):
@@ -15,47 +16,39 @@ class FeedHandler:
         try:
             self.logger.info(f"Attempting to fetch feed from {self.feed_url}")
             
-            # Set custom headers to avoid potential blocking
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'application/rss+xml, application/xml, application/atom+xml, application/xhtml+xml, text/xml;q=0.9',
-            }
+            # Use feedparser directly first
+            feed = feedparser.parse(self.feed_url)
             
-            # Fetch the feed content
-            response = requests.get(self.feed_url, headers=headers, allow_redirects=True, timeout=10)
-            self.logger.info(f"Response status code: {response.status_code}")
-            self.logger.info(f"Final URL after redirects: {response.url}")
+            # Check if feed was successfully parsed
+            if hasattr(feed, 'status'):
+                self.logger.info(f"Feed status: {feed.status}")
             
-            # Check response headers
-            self.logger.debug(f"Response headers: {dict(response.headers)}")
+            # Check if feed has entries
+            if hasattr(feed, 'entries'):
+                self.logger.info(f"Found {len(feed.entries)} entries")
+                if feed.entries:
+                    self.logger.info(f"First entry title: {feed.entries[0].title}")
+            else:
+                self.logger.warning("No entries found in feed")
             
-            # Log response content type
-            content_type = response.headers.get('content-type', 'unknown')
-            self.logger.info(f"Content-Type: {content_type}")
+            # If feedparser fails, try with requests as backup
+            if not hasattr(feed, 'entries') or len(feed.entries) == 0:
+                self.logger.info("Attempting to fetch with requests as backup")
+                response = requests.get(
+                    self.feed_url,
+                    headers={
+                        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    },
+                    timeout=10
+                )
+                feed = feedparser.parse(response.text)
             
-            # Parse feed content
-            feed = feedparser.parse(response.text)
-            
-            # Basic feed validation
+            # Final validation
             if not hasattr(feed, 'entries'):
-                self.logger.error("No entries found in feed")
-                self.logger.debug(f"Response content preview: {response.text[:500]}...")
                 raise Exception("Invalid feed structure - no entries found")
-            
-            # Log feed information
-            feed_title = feed.feed.get('title', 'Unknown') if hasattr(feed, 'feed') else 'No feed title'
-            self.logger.info(f"Feed title: {feed_title}")
-            self.logger.info(f"Number of entries: {len(feed.entries)}")
-            
-            if feed.entries:
-                self.logger.info(f"Latest entry: {feed.entries[0].title}")
             
             return feed
             
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Request error: {str(e)}")
-            self.logger.debug("Request exception details:", exc_info=True)
-            raise Exception(f"Failed to fetch feed: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error fetching feed: {str(e)}")
             self.logger.debug("Exception details:", exc_info=True)
@@ -66,14 +59,18 @@ class FeedHandler:
         try:
             entries = []
             for entry in feed.entries:
-                entry_data = {
-                    'title': entry.title,
-                    'link': entry.link,
-                    'published': entry.published if hasattr(entry, 'published') else None,
-                    'content': self._extract_content(entry)
-                }
-                entries.append(entry_data)
-                self.logger.debug(f"Processed entry: {entry_data['title']}")
+                try:
+                    entry_data = {
+                        'title': getattr(entry, 'title', 'No Title'),
+                        'link': getattr(entry, 'link', ''),
+                        'published': getattr(entry, 'published', None),
+                        'content': self._extract_content(entry)
+                    }
+                    entries.append(entry_data)
+                    self.logger.debug(f"Processed entry: {entry_data['title']}")
+                except Exception as e:
+                    self.logger.error(f"Error processing entry: {str(e)}")
+                    continue
             return entries
         except Exception as e:
             self.logger.error(f"Error processing entries: {str(e)}")
@@ -82,16 +79,21 @@ class FeedHandler:
     def _extract_content(self, entry):
         """Extract and clean the main content from an entry"""
         try:
+            content = ""
             if hasattr(entry, 'content'):
                 content = entry.content[0].value
             elif hasattr(entry, 'summary'):
                 content = entry.summary
+            elif hasattr(entry, 'description'):
+                content = entry.description
+            
+            if content:
+                soup = BeautifulSoup(content, 'html.parser')
+                return soup.get_text(separator=' ').strip()
             else:
-                self.logger.warning(f"No content found for entry: {entry.title if hasattr(entry, 'title') else 'unknown'}")
-                content = ""
+                self.logger.warning(f"No content found for entry: {getattr(entry, 'title', 'unknown')}")
+                return ""
                 
-            soup = BeautifulSoup(content, 'html.parser')
-            return soup.get_text(separator=' ').strip()
         except Exception as e:
             self.logger.error(f"Error extracting content: {str(e)}")
             return ""
