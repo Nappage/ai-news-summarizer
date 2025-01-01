@@ -13,29 +13,38 @@ class FeedHandler:
     def fetch_feed(self):
         """Fetch the RSS feed and return the parsed data"""
         try:
-            # First try to get the final URL after redirects
+            # Configure session with headers
             session = requests.Session()
-            response = session.get(self.feed_url, allow_redirects=True)
-            final_url = response.url
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
             
-            self.logger.info(f"Initial URL: {self.feed_url}")
-            self.logger.info(f"Final URL after redirects: {final_url}")
+            # Make the request with proper headers
+            self.logger.info(f"Fetching feed from: {self.feed_url}")
+            response = session.get(self.feed_url, headers=headers, allow_redirects=True)
+            
             self.logger.info(f"Response status code: {response.status_code}")
+            self.logger.info(f"Final URL: {response.url}")
             
-            # Use feedparser directly with the content
+            # Use feedparser to parse the response content
             feed = feedparser.parse(response.text)
             
-            # Basic validation of the feed
+            # Print debug information
+            self.logger.debug(f"Feed version: {feed.get('version', 'unknown')}")
+            self.logger.debug(f"Feed title: {feed.feed.get('title', 'unknown') if hasattr(feed, 'feed') else 'no feed info'}")
+            
+            # Validate feed structure
             if not hasattr(feed, 'entries'):
-                self.logger.error("Feed parsing failed: no entries found")
-                self.logger.debug(f"Feed content: {response.text[:500]}...")
-                raise Exception("Invalid feed format - no entries found")
+                self.logger.error("No entries found in feed")
+                self.logger.debug(f"Response content preview: {response.text[:500]}...")
+                raise Exception("Invalid feed structure - no entries found")
             
             self.logger.info(f"Successfully parsed feed with {len(feed.entries)} entries")
             return feed
             
         except Exception as e:
             self.logger.error(f"Error fetching feed: {str(e)}")
+            self.logger.error(f"Feed URL: {self.feed_url}")
             raise Exception(f"Error fetching feed: {str(e)}")
     
     def get_new_entries(self, feed):
