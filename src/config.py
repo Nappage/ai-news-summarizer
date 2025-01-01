@@ -7,8 +7,8 @@ load_dotenv()
 class Config:
     # Use GOOGLE_API_KEY instead of GEMINI_API_KEY
     GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY')
-    # Use DeepLearning.AI's Substack RSS feed as a more reliable source
-    RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://newsletter.theaivalley.com/feed")
+    # Use HuggingFace blog RSS feed
+    RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://huggingface.co/blog/feed.xml")
     OUTPUT_DIR = os.getenv('OUTPUT_DIR', "output")
     MAX_SUMMARY_LENGTH = int(os.getenv('MAX_SUMMARY_LENGTH', "500"))
     RETRY_COUNT = 3
