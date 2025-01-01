@@ -15,15 +15,23 @@ class FeedHandler:
         try:
             self.logger.info(f"Attempting to fetch feed from {self.feed_url}")
             
-            # Direct parsing with feedparser
-            feed = feedparser.parse(self.feed_url)
+            # First try with requests to check the response
+            response = requests.get(self.feed_url, allow_redirects=True)
+            self.logger.info(f"HTTP Status Code: {response.status_code}")
+            self.logger.info(f"Final URL: {response.url}")
             
-            self.logger.info(f"Feed parsing status: {feed.get('status', 'unknown')}")
-            self.logger.info(f"Feed version: {feed.get('version', 'unknown')}")
+            if response.status_code != 200:
+                self.logger.error(f"HTTP error {response.status_code}")
+                self.logger.debug(f"Response headers: {dict(response.headers)}")
+                raise Exception(f"HTTP error {response.status_code}")
+            
+            # Parse the feed content
+            feed = feedparser.parse(response.text)
             
             # Validate feed structure
             if not hasattr(feed, 'entries'):
                 self.logger.error("No entries found in feed")
+                self.logger.debug(f"Feed content preview: {response.text[:500]}...")
                 raise Exception("Invalid feed structure - no entries found")
             
             if len(feed.entries) == 0:
@@ -35,6 +43,9 @@ class FeedHandler:
             
             return feed
             
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Request error: {str(e)}")
+            raise Exception(f"Failed to fetch feed: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error fetching feed: {str(e)}")
             raise
