@@ -7,7 +7,7 @@ load_dotenv()
 class Config:
     # Use GOOGLE_API_KEY instead of GEMINI_API_KEY
     GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY')
-    # Use a reliable tech news RSS feed
+    # Use MIT Tech News RSS feed
     RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://news.mit.edu/rss/feed")
     OUTPUT_DIR = os.getenv('OUTPUT_DIR', "output")
     MAX_SUMMARY_LENGTH = int(os.getenv('MAX_SUMMARY_LENGTH', "500"))
