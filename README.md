@@ -2,25 +2,16 @@
 
 Google DeepMindのブログ記事を自動で要約・翻訳するPythonツール
 
-## 概要
+## セキュリティに関する重要な注意
 
-このプロジェクトは、Google DeepMindの公式ブログのRSSフィードから最新の記事を取得し、Gemini APIを使用して要約と日本語翻訳を行います。
-
-### 主な機能
-
-- Google DeepMindのRSSフィードからの記事取得
-- Gemini APIによる記事の要約
-- 英語から日本語への翻訳
-- Markdown形式での出力
+⚠️ **APIキーの取り扱いについて**
+- APIキーは環境変数`GOOGLE_API_KEY`として設定してください
+- `.env`ファイルは絶対にGitHubにコミットしないでください
+- Google Colabを使用する場合は、Secretsマネージャーを使用してください
 
 ## セットアップ
 
-### 必要条件
-
-- Python 3.9以上
-- Gemini API キー
-
-### インストール手順
+### ローカル環境
 
 1. リポジトリのクローン:
 ```bash
@@ -28,22 +19,49 @@ git clone https://github.com/Nappage/ai-news-summarizer.git
 cd ai-news-summarizer
 ```
 
-2. 仮想環境の作成と有効化:
+2. 環境変数の設定:
+```bash
+cp .env.example .env
+# .envファイルを編集してGOOGLE_API_KEYを設定
+```
+
+3. 仮想環境のセットアップ:
 ```bash
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-```
-
-3. 必要なパッケージのインストール:
-```bash
 pip install -r requirements.txt
 ```
 
-4. 環境変数の設定:
-- `.env.example` を `.env` にコピーし、Gemini APIキーを設定
+### Google Colab環境
 
-### 使用方法
+1. Secretsの設定:
+   - Colab メニューから「ファイル」→「シークレットを管理」を選択
+   - 名前: `GOOGLE_API_KEY`を追加
+   - APIキーを値として設定
 
-```bash
-python -m src.main
+2. リポジトリのクローンとセットアップ:
+```python
+!git clone https://github.com/Nappage/ai-news-summarizer.git
+%cd ai-news-summarizer
+!pip install -r requirements.txt
 ```
+
+## 使用方法
+
+```python
+# ローカル環境
+python -m src.main
+
+# Google Colab
+from src.main import main
+await main()
+```
+
+## 出力ファイル
+
+- 生成されたファイルは`output/`ディレクトリに保存されます
+- このディレクトリは`.gitignore`に含まれており、生成ファイルはGitHubにコミットされません
+
+## セキュリティポリシー
+
+詳細なセキュリティガイドラインについては、[SECURITY.md](SECURITY.md)を参照してください。
