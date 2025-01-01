@@ -1,6 +1,5 @@
 import feedparser
 from bs4 import BeautifulSoup
-import requests
 from datetime import datetime
 from .config import Config
 import logging
@@ -15,16 +14,13 @@ class FeedHandler:
         try:
             self.logger.info(f"Fetching feed from: {self.feed_url}")
             
-            # Parse feed directly with feedparser
+            # Parse feed with feedparser
             feed = feedparser.parse(self.feed_url)
             
-            # Check if feed was successfully parsed
-            if hasattr(feed, 'status'):
-                self.logger.info(f"Feed status: {feed.status}")
-                if feed.status != 200:
-                    self.logger.error(f"Feed returned status: {feed.status}")
+            self.logger.debug(f"Feed version: {getattr(feed, 'version', 'unknown')}")
+            self.logger.debug(f"Feed type: {getattr(feed, 'feed_type', 'unknown')}")
             
-            # Validate feed structure
+            # Validate feed
             if not hasattr(feed, 'entries'):
                 raise Exception("Invalid feed structure - no entries found")
             
