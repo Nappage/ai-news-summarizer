@@ -8,25 +8,27 @@ class FeedHandler:
     def __init__(self):
         self.feed_url = Config.RSS_FEED_URL
         self.logger = logging.getLogger(__name__)
+        # エラーチェックを無効化
+        feedparser.PREFERRED_XML_PARSERS = []
         
     def fetch_feed(self):
         """Fetch the RSS feed and return the parsed data"""
         try:
             self.logger.info(f"Fetching feed from: {self.feed_url}")
+            
+            # フィードをパース
             feed = feedparser.parse(self.feed_url)
             
-            # Log feed status for debugging
-            if hasattr(feed, 'status'):
-                self.logger.info(f"Feed status: {feed.status}")
-            if hasattr(feed, 'headers'):
-                self.logger.debug(f"Feed headers: {feed.headers}")
+            # 基本情報をログに出力
+            self.logger.info(f"Feed version: {getattr(feed, 'version', 'unknown')}")
+            self.logger.info(f"Feed status: {getattr(feed, 'status', 'unknown')}")
             
-            # Check for entries directly without raising exceptions
-            entries_count = len(feed.get('entries', []))
+            # エントリー数をチェック
+            entries_count = len(feed.entries)
             self.logger.info(f"Found {entries_count} entries")
             
             if entries_count > 0:
-                self.logger.info(f"Latest entry title: {feed.entries[0].title}")
+                self.logger.info(f"Latest entry: {feed.entries[0].title}")
             else:
                 self.logger.warning("No entries found in feed")
             
@@ -42,7 +44,7 @@ class FeedHandler:
             entries = []
             for entry in feed.entries:
                 content = self._extract_content(entry)
-                if content:  # Only add entries with content
+                if content:  # コンテンツがある場合のみ追加
                     entry_data = {
                         'title': getattr(entry, 'title', 'No Title'),
                         'link': getattr(entry, 'link', ''),
@@ -54,6 +56,8 @@ class FeedHandler:
             
             if not entries:
                 self.logger.warning("No valid entries found")
+            else:
+                self.logger.info(f"Successfully processed {len(entries)} entries")
             
             return entries
             
@@ -65,7 +69,6 @@ class FeedHandler:
         """Extract and clean the main content from an entry"""
         try:
             content = ""
-            # Try different content fields in order of preference
             if hasattr(entry, 'content'):
                 content = entry.content[0].value
             elif hasattr(entry, 'summary'):
