@@ -4,7 +4,6 @@ import requests
 from datetime import datetime
 from .config import Config
 import logging
-import time
 
 class FeedHandler:
     def __init__(self):
@@ -16,36 +15,28 @@ class FeedHandler:
         try:
             self.logger.info(f"Attempting to fetch feed from {self.feed_url}")
             
-            # Use feedparser directly first
-            feed = feedparser.parse(self.feed_url)
+            # Try to fetch the feed content directly with requests first
+            response = requests.get(self.feed_url)
+            self.logger.info(f"HTTP Status: {response.status_code}")
+            self.logger.info(f"Content type: {response.headers.get('content-type', 'unknown')}")
             
-            # Check if feed was successfully parsed
-            if hasattr(feed, 'status'):
-                self.logger.info(f"Feed status: {feed.status}")
-            
-            # Check if feed has entries
-            if hasattr(feed, 'entries'):
-                self.logger.info(f"Found {len(feed.entries)} entries")
-                if feed.entries:
-                    self.logger.info(f"First entry title: {feed.entries[0].title}")
+            if response.status_code == 200:
+                feed = feedparser.parse(response.content)
             else:
-                self.logger.warning("No entries found in feed")
+                self.logger.warning(f"Direct request failed with status {response.status_code}, trying feedparser")
+                feed = feedparser.parse(self.feed_url)
             
-            # If feedparser fails, try with requests as backup
-            if not hasattr(feed, 'entries') or len(feed.entries) == 0:
-                self.logger.info("Attempting to fetch with requests as backup")
-                response = requests.get(
-                    self.feed_url,
-                    headers={
-                        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                    },
-                    timeout=10
-                )
-                feed = feedparser.parse(response.text)
-            
-            # Final validation
+            # Validate feed structure
             if not hasattr(feed, 'entries'):
+                self.logger.error("No entries found in feed")
+                self.logger.debug(f"Feed content preview: {response.text[:500]}...")
                 raise Exception("Invalid feed structure - no entries found")
+            
+            if feed.entries:
+                self.logger.info(f"Successfully fetched {len(feed.entries)} entries")
+                self.logger.info(f"First entry title: {feed.entries[0].title}")
+            else:
+                self.logger.warning("Feed contains no entries")
             
             return feed
             
@@ -59,18 +50,14 @@ class FeedHandler:
         try:
             entries = []
             for entry in feed.entries:
-                try:
-                    entry_data = {
-                        'title': getattr(entry, 'title', 'No Title'),
-                        'link': getattr(entry, 'link', ''),
-                        'published': getattr(entry, 'published', None),
-                        'content': self._extract_content(entry)
-                    }
-                    entries.append(entry_data)
-                    self.logger.debug(f"Processed entry: {entry_data['title']}")
-                except Exception as e:
-                    self.logger.error(f"Error processing entry: {str(e)}")
-                    continue
+                entry_data = {
+                    'title': getattr(entry, 'title', 'No Title'),
+                    'link': getattr(entry, 'link', ''),
+                    'published': getattr(entry, 'published', None),
+                    'content': self._extract_content(entry)
+                }
+                entries.append(entry_data)
+                self.logger.debug(f"Processed entry: {entry_data['title']}")
             return entries
         except Exception as e:
             self.logger.error(f"Error processing entries: {str(e)}")
@@ -87,12 +74,11 @@ class FeedHandler:
             elif hasattr(entry, 'description'):
                 content = entry.description
             
-            if content:
-                soup = BeautifulSoup(content, 'html.parser')
-                return soup.get_text(separator=' ').strip()
-            else:
-                self.logger.warning(f"No content found for entry: {getattr(entry, 'title', 'unknown')}")
+            if not content:
                 return ""
+                
+            soup = BeautifulSoup(content, 'html.parser')
+            return soup.get_text(separator=' ').strip()
                 
         except Exception as e:
             self.logger.error(f"Error extracting content: {str(e)}")
