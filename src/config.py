@@ -7,7 +7,7 @@ load_dotenv()
 class Config:
     # Use GOOGLE_API_KEY instead of GEMINI_API_KEY
     GEMINI_API_KEY = os.getenv('GOOGLE_API_KEY')
-    RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://deepmind.com/blog/feed/basic/")
+    RSS_FEED_URL = os.getenv('RSS_FEED_URL', "https://www.deepmind.com/blog/rss.xml")
     OUTPUT_DIR = os.getenv('OUTPUT_DIR', "output")
     MAX_SUMMARY_LENGTH = int(os.getenv('MAX_SUMMARY_LENGTH', "500"))
     RETRY_COUNT = 3
