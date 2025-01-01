@@ -15,39 +15,50 @@ class FeedHandler:
         try:
             self.logger.info(f"Attempting to fetch feed from {self.feed_url}")
             
-            # First try with requests to check the response
-            response = requests.get(self.feed_url, allow_redirects=True)
-            self.logger.info(f"HTTP Status Code: {response.status_code}")
-            self.logger.info(f"Final URL: {response.url}")
+            # Set custom headers to avoid potential blocking
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/rss+xml, application/xml, application/atom+xml, application/xhtml+xml, text/xml;q=0.9',
+            }
             
-            if response.status_code != 200:
-                self.logger.error(f"HTTP error {response.status_code}")
-                self.logger.debug(f"Response headers: {dict(response.headers)}")
-                raise Exception(f"HTTP error {response.status_code}")
+            # Fetch the feed content
+            response = requests.get(self.feed_url, headers=headers, allow_redirects=True, timeout=10)
+            self.logger.info(f"Response status code: {response.status_code}")
+            self.logger.info(f"Final URL after redirects: {response.url}")
             
-            # Parse the feed content
+            # Check response headers
+            self.logger.debug(f"Response headers: {dict(response.headers)}")
+            
+            # Log response content type
+            content_type = response.headers.get('content-type', 'unknown')
+            self.logger.info(f"Content-Type: {content_type}")
+            
+            # Parse feed content
             feed = feedparser.parse(response.text)
             
-            # Validate feed structure
+            # Basic feed validation
             if not hasattr(feed, 'entries'):
                 self.logger.error("No entries found in feed")
-                self.logger.debug(f"Feed content preview: {response.text[:500]}...")
+                self.logger.debug(f"Response content preview: {response.text[:500]}...")
                 raise Exception("Invalid feed structure - no entries found")
             
-            if len(feed.entries) == 0:
-                self.logger.warning("Feed contains no entries")
-            else:
-                self.logger.info(f"Successfully fetched {len(feed.entries)} entries")
-                # Log first entry title for debugging
-                self.logger.debug(f"First entry title: {feed.entries[0].title if feed.entries else 'N/A'}")
+            # Log feed information
+            feed_title = feed.feed.get('title', 'Unknown') if hasattr(feed, 'feed') else 'No feed title'
+            self.logger.info(f"Feed title: {feed_title}")
+            self.logger.info(f"Number of entries: {len(feed.entries)}")
+            
+            if feed.entries:
+                self.logger.info(f"Latest entry: {feed.entries[0].title}")
             
             return feed
             
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Request error: {str(e)}")
+            self.logger.debug("Request exception details:", exc_info=True)
             raise Exception(f"Failed to fetch feed: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error fetching feed: {str(e)}")
+            self.logger.debug("Exception details:", exc_info=True)
             raise
     
     def get_new_entries(self, feed):
