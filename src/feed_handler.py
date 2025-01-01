@@ -11,10 +11,20 @@ class FeedHandler:
     def fetch_feed(self):
         """Fetch the RSS feed and return the parsed data"""
         try:
-            feed = feedparser.parse(self.feed_url)
-            if feed.status != 200:
-                raise Exception(f"Failed to fetch feed. Status: {feed.status}")
+            # Use requests to handle redirects
+            response = requests.get(self.feed_url, allow_redirects=True)
+            if response.status_code != 200:
+                raise Exception(f"Failed to fetch feed. Status: {response.status_code}")
+            
+            # Parse the feed content
+            feed = feedparser.parse(response.content)
+            
+            # Validate feed parsing
+            if not hasattr(feed, 'entries'):
+                raise Exception("Invalid feed format")
+                
             return feed
+            
         except Exception as e:
             raise Exception(f"Error fetching feed: {str(e)}")
     
@@ -25,7 +35,7 @@ class FeedHandler:
             entry_data = {
                 'title': entry.title,
                 'link': entry.link,
-                'published': entry.published,
+                'published': entry.published if hasattr(entry, 'published') else None,
                 'content': self._extract_content(entry)
             }
             entries.append(entry_data)
