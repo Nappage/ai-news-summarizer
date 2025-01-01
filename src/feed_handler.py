@@ -3,29 +3,39 @@ from bs4 import BeautifulSoup
 import requests
 from datetime import datetime
 from .config import Config
+import logging
 
 class FeedHandler:
     def __init__(self):
         self.feed_url = Config.RSS_FEED_URL
+        self.logger = logging.getLogger(__name__)
         
     def fetch_feed(self):
         """Fetch the RSS feed and return the parsed data"""
         try:
-            # Use requests to handle redirects
-            response = requests.get(self.feed_url, allow_redirects=True)
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch feed. Status: {response.status_code}")
+            # First try to get the final URL after redirects
+            session = requests.Session()
+            response = session.get(self.feed_url, allow_redirects=True)
+            final_url = response.url
             
-            # Parse the feed content
-            feed = feedparser.parse(response.content)
+            self.logger.info(f"Initial URL: {self.feed_url}")
+            self.logger.info(f"Final URL after redirects: {final_url}")
+            self.logger.info(f"Response status code: {response.status_code}")
             
-            # Validate feed parsing
+            # Use feedparser directly with the content
+            feed = feedparser.parse(response.text)
+            
+            # Basic validation of the feed
             if not hasattr(feed, 'entries'):
-                raise Exception("Invalid feed format")
-                
+                self.logger.error("Feed parsing failed: no entries found")
+                self.logger.debug(f"Feed content: {response.text[:500]}...")
+                raise Exception("Invalid feed format - no entries found")
+            
+            self.logger.info(f"Successfully parsed feed with {len(feed.entries)} entries")
             return feed
             
         except Exception as e:
+            self.logger.error(f"Error fetching feed: {str(e)}")
             raise Exception(f"Error fetching feed: {str(e)}")
     
     def get_new_entries(self, feed):
