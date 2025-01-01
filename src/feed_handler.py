@@ -15,16 +15,22 @@ class FeedHandler:
             self.logger.info(f"Fetching feed from: {self.feed_url}")
             feed = feedparser.parse(self.feed_url)
             
-            if hasattr(feed, 'bozo_exception'):
-                self.logger.error(f"Feed parsing error: {feed.bozo_exception}")
+            # Log feed status for debugging
+            if hasattr(feed, 'status'):
+                self.logger.info(f"Feed status: {feed.status}")
+            if hasattr(feed, 'headers'):
+                self.logger.debug(f"Feed headers: {feed.headers}")
             
-            if hasattr(feed, 'entries'):
-                self.logger.info(f"Found {len(feed.entries)} entries")
-                if feed.entries:
-                    self.logger.info(f"Latest entry: {feed.entries[0].title}")
-                return feed
+            # Check for entries directly without raising exceptions
+            entries_count = len(feed.get('entries', []))
+            self.logger.info(f"Found {entries_count} entries")
+            
+            if entries_count > 0:
+                self.logger.info(f"Latest entry title: {feed.entries[0].title}")
             else:
-                raise Exception("No entries found in feed")
+                self.logger.warning("No entries found in feed")
+            
+            return feed
                 
         except Exception as e:
             self.logger.error(f"Error fetching feed: {str(e)}")
