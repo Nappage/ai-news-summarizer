@@ -13,24 +13,19 @@ class FeedHandler:
         """Fetch the RSS feed and return the parsed data"""
         try:
             self.logger.info(f"Fetching feed from: {self.feed_url}")
-            
-            # Parse feed with feedparser
             feed = feedparser.parse(self.feed_url)
             
-            # Log detailed feed information
-            self.logger.debug(f"Feed status: {feed.get('status', 'unknown')}")
-            self.logger.debug(f"Feed headers: {feed.get('headers', {})}")
+            if hasattr(feed, 'bozo_exception'):
+                self.logger.error(f"Feed parsing error: {feed.bozo_exception}")
             
-            # Don't raise exception for HTTP status codes
-            # Instead, check if we have entries
-            if not feed.entries:
-                self.logger.warning("No entries found in feed")
-            else:
+            if hasattr(feed, 'entries'):
                 self.logger.info(f"Found {len(feed.entries)} entries")
-                self.logger.debug(f"First entry title: {feed.entries[0].title}")
-            
-            return feed
-            
+                if feed.entries:
+                    self.logger.info(f"Latest entry: {feed.entries[0].title}")
+                return feed
+            else:
+                raise Exception("No entries found in feed")
+                
         except Exception as e:
             self.logger.error(f"Error fetching feed: {str(e)}")
             raise
@@ -40,15 +35,22 @@ class FeedHandler:
         try:
             entries = []
             for entry in feed.entries:
-                entry_data = {
-                    'title': getattr(entry, 'title', 'No Title'),
-                    'link': getattr(entry, 'link', ''),
-                    'published': getattr(entry, 'published', None),
-                    'content': self._extract_content(entry)
-                }
-                entries.append(entry_data)
-                self.logger.debug(f"Processed entry: {entry_data['title']}")
+                content = self._extract_content(entry)
+                if content:  # Only add entries with content
+                    entry_data = {
+                        'title': getattr(entry, 'title', 'No Title'),
+                        'link': getattr(entry, 'link', ''),
+                        'published': getattr(entry, 'published', None),
+                        'content': content
+                    }
+                    entries.append(entry_data)
+                    self.logger.debug(f"Added entry: {entry_data['title']}")
+            
+            if not entries:
+                self.logger.warning("No valid entries found")
+            
             return entries
+            
         except Exception as e:
             self.logger.error(f"Error processing entries: {str(e)}")
             raise
@@ -57,6 +59,7 @@ class FeedHandler:
         """Extract and clean the main content from an entry"""
         try:
             content = ""
+            # Try different content fields in order of preference
             if hasattr(entry, 'content'):
                 content = entry.content[0].value
             elif hasattr(entry, 'summary'):
@@ -64,11 +67,10 @@ class FeedHandler:
             elif hasattr(entry, 'description'):
                 content = entry.description
             
-            if not content:
-                return ""
-                
-            soup = BeautifulSoup(content, 'html.parser')
-            return soup.get_text(separator=' ').strip()
+            if content:
+                soup = BeautifulSoup(content, 'html.parser')
+                return soup.get_text(separator=' ').strip()
+            return ""
                 
         except Exception as e:
             self.logger.error(f"Error extracting content: {str(e)}")
