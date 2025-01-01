@@ -17,15 +17,16 @@ class FeedHandler:
             # Parse feed with feedparser
             feed = feedparser.parse(self.feed_url)
             
-            self.logger.debug(f"Feed version: {getattr(feed, 'version', 'unknown')}")
-            self.logger.debug(f"Feed type: {getattr(feed, 'feed_type', 'unknown')}")
+            # Log detailed feed information
+            self.logger.debug(f"Feed status: {feed.get('status', 'unknown')}")
+            self.logger.debug(f"Feed headers: {feed.get('headers', {})}")
             
-            # Validate feed
-            if not hasattr(feed, 'entries'):
-                raise Exception("Invalid feed structure - no entries found")
-            
-            self.logger.info(f"Successfully fetched {len(feed.entries)} entries")
-            if feed.entries:
+            # Don't raise exception for HTTP status codes
+            # Instead, check if we have entries
+            if not feed.entries:
+                self.logger.warning("No entries found in feed")
+            else:
+                self.logger.info(f"Found {len(feed.entries)} entries")
                 self.logger.debug(f"First entry title: {feed.entries[0].title}")
             
             return feed
